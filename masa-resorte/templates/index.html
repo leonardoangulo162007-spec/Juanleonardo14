@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Vibraciones - Sistema Masa-Resorte</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🔬 Análisis de Vibraciones</h1>
+            <p class="subtitle">Sistema Masa-Resorte con Amortiguamiento</p>
+        </header>
+
+        <div class="content-wrapper">
+            <!-- Panel de entrada de datos -->
+            <div class="input-panel">
+                <!-- TAB DE SELECCIÓN -->
+                <div class="tab-buttons">
+                    <button type="button" class="tab-btn active" data-tab="simulacion">💻 Simulación</button>
+                    <button type="button" class="tab-btn" data-tab="experimental">🔬 Experimental</button>
+                </div>
+
+                <!-- PANEL DE SIMULACIÓN -->
+                <div id="panel-simulacion" class="tab-content active">
+                    <h2>Parámetros del Sistema</h2>
+                    <form id="parametrosForm">
+                    <div class="form-group">
+                        <label for="masa">
+                            <span class="label-icon">⚖️</span>
+                            Masa (kg)
+                        </label>
+                        <input type="number" id="masa" name="masa" value="1.0" step="0.1" min="0.1" required>
+                        <small>Masa del sistema en kilogramos</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="constante_resorte">
+                            <span class="label-icon">🔗</span>
+                            Constante del Resorte (N/m)
+                        </label>
+                        <input type="number" id="constante_resorte" name="constante_resorte" value="100.0" step="1" min="1" required>
+                        <small>Rigidez del resorte en Newton por metro</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amortiguamiento">
+                            <span class="label-icon">💨</span>
+                            Amortiguamiento (N·s/m)
+                        </label>
+                        <input type="number" id="amortiguamiento" name="amortiguamiento" value="1.0" step="0.1" min="0" required>
+                        <small>Coeficiente de amortiguamiento viscoso</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fuerza">
+                            <span class="label-icon">⚡</span>
+                            Fuerza de Excitación (N)
+                        </label>
+                        <input type="number" id="fuerza" name="fuerza" value="5.0" step="0.01" min="0.01" required>
+                        <small>Amplitud de la fuerza externa aplicada</small>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" id="guardar_datos" name="guardar_datos" checked>
+                            <span>Guardar datos en archivo Excel</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="btnCalcular">
+                        <span>🚀 Calcular Análisis</span>
+                    </button>
+
+                    <button type="button" class="btn-secondary" id="btnRestablecer">
+                        <span>🔄 Restablecer Valores</span>
+                    </button>
+                </form>
+
+                <div class="info-box">
+                    <h3>ℹ️ Información</h3>
+                    <p>Este simulador analiza el comportamiento de un sistema masa-resorte con amortiguamiento bajo fuerzas externas, incluyendo el fenómeno de resonancia.</p>
+                </div>
+                </div>
+
+                <!-- PANEL EXPERIMENTAL (ARDUINO) -->
+                <div id="panel-experimental" class="tab-content">
+                    <h2>🔬 Experimento Físico</h2>
+                    
+                    <!-- Descripción del Modo Experimental -->
+                    <div class="info-box info-experimental">
+                        <h3>📋 Acerca del Modo Experimental</h3>
+                        <p><strong>Propósito:</strong> Este módulo permite capturar y analizar vibraciones ambientales reales utilizando un sensor piezoeléctrico conectado a Arduino UNO. El sistema está diseñado para monitorear vibraciones en entornos residenciales y urbanos que puedan afectar la salud física, el bienestar emocional y la convivencia social de las personas expuestas.</p>
+                        
+                        <p><strong>Aplicaciones:</strong></p>
+                        <ul style="margin: 8px 0; padding-left: 20px;">
+                            <li>🏗️ Monitoreo de vibraciones por construcciones cercanas</li>
+                            <li>🚚 Evaluación de impacto de tráfico pesado en viviendas</li>
+                            <li>🏭 Análisis de maquinaria industrial afectando comunidades</li>
+                            <li>❄️ Medición de vibraciones de equipos HVAC en edificios</li>
+                            <li>📊 Generación de evidencia objetiva para quejas comunitarias</li>
+                        </ul>
+                        
+                        <p><strong>Funcionamiento:</strong> El sensor piezoeléctrico captura 500 muestras por segundo a 1000 Hz, calculando parámetros como RMS, amplitud máxima, factor de cresta y desviación estándar. Los datos se transmiten en tiempo real para análisis inmediato y se generan reportes con evaluación de impactos en salud (alteración del sueño, estrés crónico, afectación de concentración) y recomendaciones específicas.</p>
+                    </div>
+                    
+                    <!-- Estado de Conexión -->
+                    <div id="estadoArduino" class="arduino-status disconnected">
+                        <div class="status-indicator"></div>
+                        <span id="statusText">Desconectado</span>
+                    </div>
+
+                    <!-- Selección de Puerto -->
+                    <div class="form-group">
+                        <label>
+                            <span class="label-icon">🔌</span>
+                            Puerto COM
+                        </label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="selectPuerto" class="puerto-select">
+                                <option value="">Seleccionar puerto...</option>
+                            </select>
+                            <button type="button" class="btn-icon" id="btnRefreshPuertos" title="Actualizar puertos">
+                                🔄
+                            </button>
+                        </div>
+                        <small>Selecciona el puerto COM del Arduino</small>
+                    </div>
+
+                    <!-- Botones de Conexión -->
+                    <button type="button" class="btn-primary" id="btnConectar">
+                        <span>🔌 Conectar Arduino</span>
+                    </button>
+
+                    <button type="button" class="btn-danger" id="btnDesconectar" style="display:none;">
+                        <span>🔌 Desconectar Arduino</span>
+                    </button>
+
+                    <!-- Panel de Monitoreo en Tiempo Real -->
+                    <div id="panelMonitoreo" style="display:none;">
+                        <h3>📡 Monitoreo en Tiempo Real</h3>
+                        
+                        <div class="monitor-stats">
+                            <div class="monitor-item">
+                                <span class="monitor-label">RMS:</span>
+                                <span class="monitor-value" id="monitor-rms">0.0000</span>
+                                <span class="monitor-unit">V</span>
+                            </div>
+                            <div class="monitor-item">
+                                <span class="monitor-label">Amplitud Máx:</span>
+                                <span class="monitor-value" id="monitor-max">0.0000</span>
+                                <span class="monitor-unit">V</span>
+                            </div>
+                            <div class="monitor-item">
+                                <span class="monitor-label">Factor Cresta:</span>
+                                <span class="monitor-value" id="monitor-crest">0.00</span>
+                            </div>
+                            <div class="monitor-item">
+                                <span class="monitor-label">Muestras:</span>
+                                <span class="monitor-value" id="monitor-samples">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Mini Gráfica en Tiempo Real -->
+                        <canvas id="miniGrafica" width="350" height="150"></canvas>
+
+                        <!-- Controles de Captura -->
+                        <div class="form-group">
+                            <label>
+                                <span class="label-icon">⏱️</span>
+                                Duración de Captura (segundos)
+                            </label>
+                            <input type="number" id="duracionCaptura" value="30" min="5" max="300" step="5">
+                        </div>
+
+                        <button type="button" class="btn-success" id="btnIniciarExperimento">
+                            <span>▶️ Iniciar Experimento</span>
+                        </button>
+
+                        <button type="button" class="btn-warning" id="btnDetenerExperimento" style="display:none;">
+                            <span>⏸️ Detener Experimento</span>
+                        </button>
+
+                        <button type="button" class="btn-primary" id="btnAnalizarExperimento" style="display:none;">
+                            <span>📊 Analizar Datos</span>
+                        </button>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>ℹ️ Instrucciones</h3>
+                        <p><strong>1.</strong> Conecta el Arduino UNO a un puerto USB</p>
+                        <p><strong>2.</strong> Selecciona el puerto COM correcto</p>
+                        <p><strong>3.</strong> Click en "Conectar Arduino"</p>
+                        <p><strong>4.</strong> Activa el motor DC desbalanceado</p>
+                        <p><strong>5.</strong> Inicia el experimento y captura datos</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de resultados -->
+            <div class="results-panel" id="resultsPanel" style="display: none;">
+                <h2>Resultados del Análisis</h2>
+                
+                <div id="loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Calculando análisis de vibraciones...</p>
+                </div>
+
+                <div id="error" class="alert alert-error" style="display: none;"></div>
+
+                <div id="results" style="display: none;">
+                    <!-- Características del Sistema -->
+                    <div class="card">
+                        <h3>📊 Características del Sistema</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Frecuencia Natural</span>
+                                <span class="stat-value" id="frecuencia_natural">-</span>
+                                <span class="stat-unit">Hz</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Frecuencia Angular</span>
+                                <span class="stat-value" id="frecuencia_angular">-</span>
+                                <span class="stat-unit">rad/s</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Factor de Amortiguamiento</span>
+                                <span class="stat-value" id="factor_amortiguamiento">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Tipo</span>
+                                <span class="stat-value" id="tipo_amortiguamiento">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Evaluación de Riesgo -->
+                    <div class="card" id="riesgoCard">
+                        <h3>⚠️ Evaluación de Riesgo</h3>
+                        <div class="alert" id="riesgoAlert">
+                            <div class="alert-header">
+                                <span class="alert-level" id="nivelRiesgo">-</span>
+                            </div>
+                            <p class="alert-description" id="descripcionRiesgo">-</p>
+                            <div id="advertenciaAdicional" style="display: none;" class="alert-warning">
+                                ⚡ Picos de amplitud excesivos detectados. Se recomienda revisar el sistema de amortiguamiento.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Análisis Comparativo -->
+                    <div class="card">
+                        <h3>📈 Análisis Comparativo</h3>
+                        <div class="comparison-grid">
+                            <div class="comparison-item">
+                                <h4>Operación Normal</h4>
+                                <div class="metric">
+                                    <span class="metric-label">RMS:</span>
+                                    <span class="metric-value" id="rms_normal">-</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Amplitud Máxima:</span>
+                                    <span class="metric-value" id="max_normal">-</span>
+                                </div>
+                            </div>
+                            <div class="comparison-item highlight">
+                                <h4>En Resonancia</h4>
+                                <div class="metric">
+                                    <span class="metric-label">RMS:</span>
+                                    <span class="metric-value" id="rms_resonancia">-</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Amplitud Máxima:</span>
+                                    <span class="metric-value" id="max_resonancia">-</span>
+                                </div>
+                                <div class="amplification">
+                                    <span>Amplificación: </span>
+                                    <strong id="amplificacion">-</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Análisis de Aceleración -->
+                    <div class="card">
+                        <h3>🎯 Análisis de Aceleración</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">RMS</span>
+                                <span class="stat-value" id="acel_rms">-</span>
+                                <span class="stat-unit">m/s²</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Aceleración Máxima</span>
+                                <span class="stat-value" id="acel_max">-</span>
+                                <span class="stat-unit">m/s²</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Factor de Cresta</span>
+                                <span class="stat-value" id="acel_cresta">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráficas -->
+                    <div class="card">
+                        <h3>📉 Gráficas de Comportamiento</h3>
+                        <div class="graph-container">
+                            <img id="graficas" src="" alt="Gráficas de análisis" style="width: 100%; height: auto;">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" id="btnNuevoAnalisis">
+                        🔄 Realizar Nuevo Análisis
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>© 2025 Sistema de Análisis de Vibraciones | Desarrollado por la escuela profesional de ingeniería informatica</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
